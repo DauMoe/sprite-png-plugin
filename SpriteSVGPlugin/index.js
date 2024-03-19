@@ -12,7 +12,11 @@ const PACKAGE_NAME = "SpriteSVGPlugin";
  *  - Compilation docs: https://webpack.js.org/api/compilation-hooks/
  */
 
-
+/**
+ * 
+ * @TODO
+ *  - Modifying output name (remove <mode>/prefix.<mode>)
+ */
 
 const isSVG = fileName => fileName?.endsWith(".svg");
 
