@@ -20,10 +20,9 @@ const setupCacheGroups = () => {
 
 const sourcePath = path.resolve(__dirname, 'src')
 const isProd = false;
-const spriteDir = path.join(__dirname, "assets", "sprite");
-const spriteName = "ahh.png";
-const manifestName = "mani.json";
-
+const spriteDir = path.join(sourcePath, "media", "sprite");
+const spriteSheetName = "ahh";
+let listPath = [];
 
 module.exports = {
     mode: isProd ? "production" : "development",
@@ -36,11 +35,11 @@ module.exports = {
         filename: '[name].js',
         assetModuleFilename: `./assets/[name][ext]`,
     },
-    // optimization: {
-    //     splitChunks: {
-    //         cacheGroups: setupCacheGroups()
-    //     },
-    // },
+    optimization: {
+        splitChunks: {
+            cacheGroups: setupCacheGroups()
+        },
+    },
     module: {
         rules: [
             {
@@ -62,19 +61,29 @@ module.exports = {
                 test: /\.png$/,
                 type: 'asset/resource',
                 use: [
-                    { loader: "file-loader" }
                     // {
-                    //     loader: "file-replace-loader",
+                    //     loader: 'file-loader',
                     //     options: {
-                    //         condition: 'if-replacement-exists',
-                    //         replacement(g) {
-                    //             if (g) {
-                    //                 return path.join(spriteDir, spriteName)
-                    //             }
-                    //             return g
-                    //         }
-                    //     }
+                    //         name(resourcePath, resourceQuery) {
+                    //             console.log("GGG", resourcePath);
+                    //             return '[name].[ext]';
+                    //         },
+                    //     },
                     // }
+                    {
+                        loader: "file-replace-loader",
+                        options: {
+                            condition: 'if-replacement-exists',
+                            replacement(resourcePath) {
+                                // Match sprite sheet regex
+                                if (resourcePath) {
+                                    listPath.push(resourcePath);
+                                    return path.join(spriteDir, spriteName)
+                                }
+                                return resourcePath
+                            }
+                        }
+                    }
                 ]
             }
         ]
@@ -85,9 +94,9 @@ module.exports = {
             template: "index.html"
         }),
         new SpritePNG_Plugin({
+            relativePaths: listPath,
             outputDir: spriteDir,
-            manifestFileName: manifestName,
-            spriteFileName: spriteName,
+            spriteSheetName: spriteSheetName
         })
     ],
     devServer: {

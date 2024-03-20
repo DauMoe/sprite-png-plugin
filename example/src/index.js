@@ -1,10 +1,10 @@
 import React from "react";
 import ReactDOM from "react-dom";
 
-import ABC from "./assets/test_1.png";
-import AccountRemove from "./assets/test_2.png";
-import Account from "./assets/test_3.png";
-import transparent from "./assets/transparent.png";
+import ABC from "./media/test_1.png";
+import AccountRemove from "./media/test_2.png";
+import Account from "./media/test_3.png";
+import transparent from "./media/transparent.png";
 
 
 const AppElement = () => {
