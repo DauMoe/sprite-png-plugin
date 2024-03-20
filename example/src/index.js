@@ -1,20 +1,19 @@
 import React from "react";
 import ReactDOM from "react-dom";
 
-import ABC from "./assets/account-add.svg";
-import AccountRemove from "./assets/account-remove.svg";
-import Account from "./assets/account.svg";
-import addProfile from "./assets/add-profile.svg";
-import alert from "./assets/alert.svg";
+import ABC from "./assets/test_1.png";
+import AccountRemove from "./assets/test_2.png";
+import Account from "./assets/test_3.png";
+import transparent from "./assets/transparent.png";
 
 
 const AppElement = () => {
-  console.log("ABC", ABC);
+  console.log("ABC", G);
   return (
     <div>
       <img src={ABC} />
-      {/* <img src={AccountRemove} />
-      <img src={Account} />
+      <img src={transparent} />
+      {/* <img src={Account} />
       <img src={addProfile} /> */}
     </div>
   );

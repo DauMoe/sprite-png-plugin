@@ -42,7 +42,7 @@
     "spritemaker-svg": "^0.1.0",
     "spritesmith": "^3.4.1",
     "style-loader": "^1.1.2",
-    "webpack": "^5.67.0",
+    "webpack": "^5.90.3",
     "webpack-cli": "^4.3.0",
     "webpack-dev-server": "^4.15.1",
     "xml2js": "^0.6.2"

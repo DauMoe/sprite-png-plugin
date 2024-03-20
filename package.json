@@ -14,7 +14,9 @@
   "author": "hoang",
   "license": "MIT",
   "dependencies": {
+    "spritesheet-js": "^1.2.8",
     "svg-sprite": "^2.0.3",
+    "webpack": "^5.90.3",
     "xml2js": "^0.6.2"
   }
 }

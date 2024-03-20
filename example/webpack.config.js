@@ -1,6 +1,6 @@
 const path = require("path");
 const HtmlWebpackPlugin = require('html-webpack-plugin');
-const SpriteSVGPlugin = require("./../index");
+const SpritePNG_Plugin = require("../index");
 
 const subStylePaths = [];
 
@@ -20,6 +20,10 @@ const setupCacheGroups = () => {
 
 const sourcePath = path.resolve(__dirname, 'src')
 const isProd = false;
+const spriteDir = path.join(__dirname, "assets", "sprite");
+const spriteName = "ahh.png";
+const manifestName = "mani.json";
+
 
 module.exports = {
     mode: isProd ? "production" : "development",
@@ -55,21 +59,22 @@ module.exports = {
                 }
             },
             {
-                test: /\.svg$/,
+                test: /\.png$/,
                 type: 'asset/resource',
                 use: [
-                    {
-                        loader: "file-replace-loader",
-                        options: {
-                            condition: 'if-replacement-exists',
-                            replacement(g) {
-                                if (g) {
-                                    return path.join(__dirname, "src/assets/sprite/test.svg")
-                                }
-                                return g
-                            }
-                        }
-                    }
+                    { loader: "file-loader" }
+                    // {
+                    //     loader: "file-replace-loader",
+                    //     options: {
+                    //         condition: 'if-replacement-exists',
+                    //         replacement(g) {
+                    //             if (g) {
+                    //                 return path.join(spriteDir, spriteName)
+                    //             }
+                    //             return g
+                    //         }
+                    //     }
+                    // }
                 ]
             }
         ]
@@ -79,10 +84,10 @@ module.exports = {
             filename: "new-index.html",
             template: "index.html"
         }),
-        new SpriteSVGPlugin({
-            outputDir: path.join(__dirname, "abcxyz"),
-            manifestFileName: "test.json",
-            spriteFileName: "Ahihi",
+        new SpritePNG_Plugin({
+            outputDir: spriteDir,
+            manifestFileName: manifestName,
+            spriteFileName: spriteName,
         })
     ],
     devServer: {
