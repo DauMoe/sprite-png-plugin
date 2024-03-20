@@ -1,7 +1,6 @@
 const fs = require('fs');
 const path = require('path');
 const SVGSpriter = require("svg-sprite");
-const util = require("util");
 const xml2js = require("xml2js");
 
 const PACKAGE_NAME = "SpriteSVGPlugin";
@@ -12,71 +11,110 @@ const PACKAGE_NAME = "SpriteSVGPlugin";
  *  - Compilation docs: https://webpack.js.org/api/compilation-hooks/
  */
 
-/**
- * 
- * @TODO
- *  - Modifying output name (remove <mode>/prefix.<mode>)
- */
-
-const isSVG = fileName => fileName?.endsWith(".svg");
-
-const genCoordinateMap = (svgData, outputDir, manifestFileName = "manifest.json") => {
-  let { contents } = svgData;
-  xml2js.parseString(contents, (err, result) => {
-    if (err) throw Error(err);
-    if (!manifestFileName?.endsWith(".json")) manifestFileName += ".json";
-
-    let coordData = {};
-    const { $, view, svg } = result.svg;
-    coordData["totalWidth"] = +$.width;
-    coordData["totalHeight"] = +$.height;
-    view.forEach((data, index) => {
-      const svgInfo = svg[index].$;
-      const { id, viewBox } = data.$;
-      coordData[id] = {
-        ...svgInfo,
-        x: +svgInfo.x || 0,
-        y: +svgInfo.y || 0,
-        width: +svgInfo.width || 0,
-        height: +svgInfo.height || 0,
-      }
-    });
-    fs.writeFile(path.join(outputDir, manifestFileName), JSON.stringify(coordData), "utf-8", () => {});
-  })
-}
-
 module.exports = class SpriteSVGPlugin {
   constructor(options = {}) {
     // this.options = options;
-    // this.includes = options.includes || [];
-    // this.excludes = options.excludes || [];
-    this.outputPath = options.outputPath ?? path.join(__dirname, "test");
-    this.manifestFileName = options.manifestFileName || undefined;
-    this.spriter = new SVGSpriter({
-      dest: this.outputPath,
+    this.includes             = options.includes; // allow regex and array
+    this.excludes             = options.excludes; // allow regex and array
+    this.outputDir            = this.getOutputDir(options.outputDir);
+    this.manifestFileName     = this.getManifestFileName(options.manifestFileName);
+    this.spriteFileName       = this.getSpriteFileName(options.spriteFileName);
+    this.relativeManifestPath = path.join(this.outputDir, this.manifestFileName);
+    this.relativeSpritePath   = path.join(this.outputDir, this.spriteFileName);
+    this.spriter              = new SVGSpriter(this.getConfig(options));
+  }
+
+  isSVG = fileName => fileName?.endsWith(".svg");
+
+  getConfig(options) {
+    return {
+      dest: this.outputDir,
       mode: {
         view: {
           bust: false,
         }
       }
-    });
+    }
   }
 
-  async genSprite(data) {
+  genCoordinateMap(svgData, outputDir, manifestFileName) {
+    let { contents } = svgData;
+    xml2js.parseString(contents, (err, result) => {
+      if (err) throw Error(err);
+  
+      let coordData = {};
+      const { $, view, svg } = result.svg;
+      coordData["totalWidth"] = +$.width;
+      coordData["totalHeight"] = +$.height;
+      if (Array.isArray(view) && Array.isArray(svg)) {
+        view.forEach((data, index) => {
+          const svgInfo = svg[index].$;
+          const { id, viewBox } = data.$;
+          coordData[id] = {
+            ...svgInfo,
+            x: +svgInfo.x || 0,
+            y: +svgInfo.y || 0,
+            width: +svgInfo.width || 0,
+            height: +svgInfo.height || 0,
+          }
+        });
+      }
+      fs.writeFile(path.join(outputDir, manifestFileName), JSON.stringify(coordData), "utf-8", () => {});
+    })
+  }
+
+  getOutputDir(output) {
+    return output ?? path.join(__dirname, "sprite_sheet");
+  }
+
+  getSpriteFileName(fileName) {
+    if (!fileName) fileName = "sprite.svg";
+    if (!fileName?.endsWith(".svg")) fileName += ".svg";
+    return fileName;
+  }
+
+  getManifestFileName(fileName) {
+    if (!fileName) fileName = "manifest.json";
+    if (!fileName?.endsWith(".json")) fileName += ".json";
+    return fileName;
+  }
+
+  _inInclude(filePath) {
+    if (!this.includes) return true;
+    const isReg = this.includes instanceof RegExp;
+    const isArr = Array.isArray(this.includes);
+    if (!(isReg || isArr)) throw Error(`"includes" prop accepts RegExp or Array only but receive "${typeof this.includes}"`);
+    if (isReg) return this.includes.test(filePath);
+    if (isArr) return this.includes.includes(filePath);
+  }
+
+  _notInExclude(filePath) {
+    if (!this.excludes) return true;
+    const isReg = this.excludes instanceof RegExp;
+    const isArr = Array.isArray(this.excludes);
+    if (!(isReg || isArr)) throw Error(`"excludes" prop accepts RegExp or Array only but receive "${typeof this.excludes}"`);
+    if (isReg) return !this.excludes.test(filePath);
+    if (isArr) return !this.excludes.includes(filePath);
+  }
+
+  isIncluded(filePath) {
+    return this._inInclude(filePath) && this._notInExclude(filePath)
+  }
+
+  async genSpriteSheet(data) {
     if (Array.isArray(data)) {
       data.forEach(svgData => {
         const { id, data } = svgData;
-        this.spriter.add(id, null, data);
+        if (this.isIncluded(id)) this.spriter.add(id, null, data);
       });
 
       try {
         const { result } = await this.spriter.compileAsync();
         for (const mode of Object.values(result)) {
           for (const resource of Object.values(mode)) {
-            // console.log("RE", resource.contents.toString());
-            genCoordinateMap(resource, this.outputPath, this.manifestFileName);
-            // fs.mkdirSync(path.dirname(resource.path), { recursive: true });
-            // fs.writeFileSync(resource.path, resource.contents);
+            this.genCoordinateMap(resource, this.outputDir, this.manifestFileName);
+            if (!fs.existsSync(this.relativeSpritePath)) fs.mkdirSync(path.dirname(this.relativeSpritePath), { recursive: true });
+            fs.writeFileSync(this.relativeSpritePath, resource.contents);
           }
         }
       } catch (e) {
@@ -87,26 +125,6 @@ module.exports = class SpriteSVGPlugin {
 
   apply(compiler) {
     compiler.hooks.thisCompilation.tap({ name: PACKAGE_NAME }, (compilation) => {
-      console.log("compiler");
-      //   compilation.hooks.processAssets.tap(PACKAGE_NAME, (chunk) => {
-      //     const assets = chunk.auxiliaryFiles;
-      //     console.log("compilation",assets);
-      //     return
-      //     const SVG_Files = [];
-      //     assets.forEach(fileName => {
-      //       if (isSVG(fileName)) {  
-      //         const asset = compilation.getAsset(fileName);
-      //         const source = asset.source.source().toString('utf8');
-      //         // console.log("HEREH", source);
-      //         SVG_Files.push({
-      //           id: fileName,
-      //           stream: asset
-      //         })
-      //       }
-      //     });
-      //     this.genSprite(SVG_Files);
-      //   })
-
       //Start creating SVG sprite sheet after all assets are move to chunk
       compilation.hooks.processAssets.tap(
         {
@@ -116,7 +134,7 @@ module.exports = class SpriteSVGPlugin {
         (assets) => {
           const SVG_Files = [];
           Object.keys(assets).map(filePath => {
-            if (isSVG(filePath)) {
+            if (this.isSVG(filePath)) {
               const asset = compilation.getAsset(filePath);
               const source = asset.source.source().toString('utf8');
               SVG_Files.push({
@@ -125,8 +143,7 @@ module.exports = class SpriteSVGPlugin {
               })
             }
           });
-          // console.log("SVG_Files", SVG_Files);
-          this.genSprite(SVG_Files);
+          this.genSpriteSheet(SVG_Files);
         }
       )
     })

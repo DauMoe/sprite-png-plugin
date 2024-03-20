@@ -1,6 +1,6 @@
 const path = require("path");
 const HtmlWebpackPlugin = require('html-webpack-plugin');
-const TestPlugin = require("./SpriteSVGPlugin");
+const SpriteSVGPlugin = require("./SpriteSVGPlugin");
 
 const subStylePaths = [];
 
@@ -64,7 +64,6 @@ module.exports = {
                             condition: 'if-replacement-exists',
                             replacement(g) {
                                 if (g) {
-                                    console.log("HELLO----------------");
                                     return path.join(__dirname, "src/assets/sprite/test.svg")
                                 }
                                 return g
@@ -80,7 +79,11 @@ module.exports = {
             filename: "new-index.html",
             template: "index.html"
         }),
-        new TestPlugin()
+        new SpriteSVGPlugin({
+            outputDir: path.join(__dirname, "abcxyz"),
+            manifestFileName: "test.json",
+            spriteFileName: "Ahihi",
+        })
     ],
     devServer: {
         static: {
