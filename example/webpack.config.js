@@ -22,14 +22,6 @@ const sourcePath = path.resolve(__dirname, 'src')
 const isProd = false;
 const spriteDir = path.join(sourcePath, "media", "sprite");
 const spriteSheetName = "ahh";
-let listPath = [];
-
-const spritePlugin = new SpritePNG_Plugin({
-    // relativePaths: listPath,
-    outputDir: spriteDir,
-});
-
-spritePlugin.createMappingFile();
 
 module.exports = {
     mode: isProd ? "production" : "development",
@@ -65,6 +57,10 @@ module.exports = {
                 }
             },
             {
+                test: /\.json$/,
+                loader: 'json-loader'
+            },
+            {
                 test: /\.png$/,
                 type: 'asset/resource',
                 // use: [
@@ -92,7 +88,7 @@ module.exports = {
             filename: "new-index.html",
             template: "index.html"
         }),
-        spritePlugin
+        new SpritePNG_Plugin()
     ],
     devServer: {
         static: {

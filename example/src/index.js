@@ -5,9 +5,10 @@ import ABC from "./media/test_1.png";
 import AccountRemove from "./media/test_2.png";
 import Account from "./media/test_3.png";
 import transparent from "./media/transparent.png";
+// const mapping = require("./coordinateMapping.json");
 
 const AppElement = () => {
-  console.log("ABC", ABC);
+  // console.log("ABC", mapping);
   return (
     <div>
       <img src={ABC} />
