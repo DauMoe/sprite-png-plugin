@@ -20,8 +20,6 @@ const setupCacheGroups = () => {
 
 const sourcePath = path.resolve(__dirname, 'src')
 const isProd = false;
-const spriteDir = path.join(sourcePath, "media", "sprite");
-const spriteSheetName = "ahh";
 
 module.exports = {
     mode: isProd ? "production" : "development",
@@ -59,29 +57,15 @@ module.exports = {
             {
                 test: /\.json$/,
                 use: [{
-                    loader: 'sprite-loader'
+                    loader: 'sprite-loader',
+                    options: {
+                        coordinateFileName: "coordinateMapping.json"
+                    }
                 }]
             },
             {
                 test: /\.png$/,
                 type: 'asset/resource',
-                // use: [
-                    // }
-                    // {
-                    //     loader: "file-replace-loader",
-                    //     options: {
-                    //         condition: 'if-replacement-exists',
-                    //         replacement(resourcePath) {
-                    //             // Match sprite sheet regex
-                    //             if (resourcePath) {
-                    //                 // listPath.push(resourcePath);
-                    //                 return path.join(spriteDir, `${spriteSheetName}.png`)
-                    //             }
-                    //             return resourcePath
-                    //         }
-                    //     }
-                    // }
-                // ]
             }
         ]
     },
@@ -94,7 +78,7 @@ module.exports = {
     ],
     resolveLoader: {
         alias: {
-            'sprite-loader': "./../loader"
+            'sprite-loader': path.join(__dirname, "..", "loader.js")
         }
     },
     devServer: {

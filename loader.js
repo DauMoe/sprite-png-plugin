@@ -2,12 +2,17 @@
 
 const ShareStore = require("./store");
 const { COORDINATE_PATH } = require("./constant");
+const path = require("path");
 
 module.exports = function (source) {
   if (this.cacheable) {
     this.cacheable();
   }
 
+  const { coordinateFileName } = this.getOptions();
+  const relativePath = this.resourcePath;
+
+  if (!coordinateFileName) throw Error('"coordinateFileName" option is required')
   // from 'json-loader': https://github.com/webpack-contrib/json-loader/blob/master/index.js
   let value;
 
@@ -22,6 +27,10 @@ module.exports = function (source) {
     value = "{}";
   }
 
-  ShareStore.addData(COORDINATE_PATH, this.resourcePath);
+  if (path.basename(relativePath) == coordinateFileName) {
+    if (ShareStore.getData(COORDINATE_PATH)) throw Error('"coordinateFileName" must be unique file name')
+    ShareStore.addData(COORDINATE_PATH, this.resourcePath);
+  }
+
   return value;
 }

@@ -18,12 +18,6 @@ const _PACKAGE_NAME = "SpritePNG_Plugin";
  *  - Refer: https://github.com/DauMoe/image-sprite-webpack-plugin
  */
 
-/**
- * @TODO
- *  - [ ] Add includes checking -> reduce size of sprite
- *  - [ ] Write or emit coordinate file?
- */
-
 module.exports = class SpritePNG_Plugin {
   constructor(option = {}) {
     this._outputPath = option.outputPath;
@@ -31,6 +25,7 @@ module.exports = class SpritePNG_Plugin {
     this._outputDir = null;
     this._publicPath = null;
     this._coordinateMeta = null;
+    this._coordinateRelativePath = null;
   }
 
   isPng = (filePath) => filePath?.endsWith('.png');
@@ -61,7 +56,6 @@ module.exports = class SpritePNG_Plugin {
 
   apply(compiler) {
     compiler.hooks.thisCompilation.tap({ name: _PACKAGE_NAME }, (compilation) => {
-
       this._outputDir = this._outputPath
           ? path.resolve(process.cwd(), this._outputPath)
           : compiler.outputPath;
@@ -75,6 +69,9 @@ module.exports = class SpritePNG_Plugin {
           stage: compilation.PROCESS_ASSETS_STAGE_ADDITIONAL,
         },
         (assets, callback) => {
+          this._coordinateRelativePath = ShareStore.getData(COORDINATE_PATH);
+          if (!this._coordinateRelativePath) throw Error('Create an unique coordinate json file first');
+
           const imagesPath = Object.keys(assets).filter(filePath => this.inWhiteList(filePath) && this.isPng(filePath));
 
           // Create image File Buffer
@@ -104,7 +101,8 @@ module.exports = class SpritePNG_Plugin {
               });
 
               if (!this.isPrevMetadata(coordinateMeta)) {
-                writeFileSync(ShareStore.getDate(COORDINATE_PATH), JSON.stringify(coordinateMeta));
+                writeFileSync(this._coordinateRelativePath, JSON.stringify(coordinateMeta));
+                ShareStore.clearStore();
               }
               callback();
             });

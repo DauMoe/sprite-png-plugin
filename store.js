@@ -7,7 +7,7 @@ class Store {
   constructor() {
     this.__store = new Map(); // follow him
     this.addData = this.addData.bind(this);
-    this.getDate = this.getDate.bind(this);
+    this.getData = this.getData.bind(this);
     this.clearStore = this.clearStore.bind(this);
   }
 
@@ -15,7 +15,7 @@ class Store {
     this.__store.set(key, value);
   }
 
-  getDate(key) {
+  getData(key) {
     return this.__store.get(key);
   }
 
