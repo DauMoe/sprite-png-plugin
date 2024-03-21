@@ -1,3 +1,1 @@
-{
-  "abc": "hello"
-}
+{"width":470,"height":120,"frames":{"test_1.png":{"x":266,"y":80,"width":24,"height":24},"test_2.png":{"x":230,"y":0,"width":240,"height":80},"test_3.png":{"x":230,"y":80,"width":36,"height":36},"transparent.png":{"x":0,"y":0,"width":230,"height":120}}}

@@ -58,7 +58,9 @@ module.exports = {
             },
             {
                 test: /\.json$/,
-                loader: 'json-loader'
+                use: [{
+                    loader: 'sprite-loader'
+                }]
             },
             {
                 test: /\.png$/,
@@ -90,6 +92,11 @@ module.exports = {
         }),
         new SpritePNG_Plugin()
     ],
+    resolveLoader: {
+        alias: {
+            'sprite-loader': "./../loader"
+        }
+    },
     devServer: {
         static: {
             directory: path.join(__dirname, 'dist'),

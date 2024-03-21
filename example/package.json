@@ -36,7 +36,6 @@
     "file-loader": "^6.2.0",
     "file-replace-loader": "^1.4.0",
     "html-webpack-plugin": "^5.3.2",
-    "json-loader": "^0.5.7",
     "react": "^17.0.2",
     "react-dom": "17.0.1",
     "react-refresh": "^0.14.0",

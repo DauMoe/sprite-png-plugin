@@ -5,16 +5,16 @@ import ABC from "./media/test_1.png";
 import AccountRemove from "./media/test_2.png";
 import Account from "./media/test_3.png";
 import transparent from "./media/transparent.png";
-// const mapping = require("./coordinateMapping.json");
+import * as data from "./coordinateMapping.json";
 
 const AppElement = () => {
-  // console.log("ABC", mapping);
+  console.log("ABC", data);
   return (
     <div>
       <img src={ABC} />
-      {/* <img src={transparent} />
+      <img src={transparent} />
       <img src={Account} />
-      <img src={AccountRemove} /> */}
+      <img src={AccountRemove} />
     </div>
   );
 };

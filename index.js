@@ -2,6 +2,11 @@ const Spritesmith = require("spritesmith");
 const Vinyl = require("vinyl");
 const { RawSource } = require("webpack-sources");
 const path = require("path");
+const { writeFileSync } = require("fs");
+const isEqual = require("./utils/lodashIsEqual");
+const cloneDeep = require("./utils/lodashCloneDeep");
+const ShareStore = require("./store");
+const { COORDINATE_PATH } = require("./constant");
 
 const _PACKAGE_NAME = "SpritePNG_Plugin";
 
@@ -17,15 +22,15 @@ const _PACKAGE_NAME = "SpritePNG_Plugin";
  * @TODO
  *  - [ ] Add includes checking -> reduce size of sprite
  *  - [ ] Write or emit coordinate file?
- *  - [ ] Cache file if it doesn't change
  */
 
 module.exports = class SpritePNG_Plugin {
   constructor(option = {}) {
     this._outputPath = option.outputPath;
-    this._whiteList = option.includes; // @TODO
+    this._includes = option.includes; // Reg and Array are allowed
     this._outputDir = null;
     this._publicPath = null;
+    this._coordinateMeta = null;
   }
 
   isPng = (filePath) => filePath?.endsWith('.png');
@@ -39,11 +44,19 @@ module.exports = class SpritePNG_Plugin {
     })
   }
 
-  createMappingFile() {
-    // if (!fs.existsSync(this.outputDir)) {
-    //   fs.mkdirSync(this.outputDir);
-    //   fs.writeFileSync(path.join(this.outputDir, `${this.spriteSheetName}.json`), "", { encoding: "utf-8" });
-    // }
+  inWhiteList(filePath) {
+    if (!this._includes) return true;
+    const isReg = this._includes instanceof RegExp;
+    const isArr = Array.isArray(this._includes);
+    if (!(isReg || isArr)) throw Error(`"includes" can be "RegExp" or "Array" only but receive "${typeof this._includes}"`);
+    if (isReg) return !this._includes.test(filePath);
+    if (isArr) return !this._includes.includes(filePath);
+  }
+
+  isPrevMetadata(newSource) {
+    const equal = isEqual(this._coordinateMeta, newSource);
+    if (!equal) this._coordinateMeta = cloneDeep(newSource);
+    return equal;
   }
 
   apply(compiler) {
@@ -55,39 +68,51 @@ module.exports = class SpritePNG_Plugin {
       
       this._publicPath = compilation.outputOptions.publicPath;
 
+      // Use "tapAsync" instead of "tap" because create sprite is async function
       compilation.hooks.processAssets.tapAsync(
         {
           name: _PACKAGE_NAME,
           stage: compilation.PROCESS_ASSETS_STAGE_ADDITIONAL,
-          additionalAssets: true
         },
         (assets, callback) => {
-          const imagesPath = Object.keys(assets).filter(this.isPng);
-          const mappingPath = Object.keys(assets).filter(filePath => path.basename(filePath) === "coordinateMapping.json");
+          const imagesPath = Object.keys(assets).filter(filePath => this.inWhiteList(filePath) && this.isPng(filePath));
+
+          // Create image File Buffer
           const imagesData = imagesPath.map(assetPath => new Vinyl({
             path: path.join(this._outputDir, assetPath),
             contents: assets[assetPath].source()
           }));
-          this.createSpriteSheet(imagesData, ({ coordinates, properties, image }) => {
-            const spriteSource = new RawSource(image);
-            imagesPath.forEach(imagePath => compilation.updateAsset(imagePath, spriteSource));
-            // compilation.updateAsset(imagesPath[0], spriteSource);
 
-            //Generate coordinate mapping
-            let coordinateMeta = {};
-            coordinateMeta["width"] = properties.width;
-            coordinateMeta["height"] = properties.height;
-            coordinateMeta["frames"] = {};
-            Object.keys(coordinates).map(relativePath => {
-              coordinateMeta["frames"][path.basename(relativePath)] = coordinates[relativePath];
+          if (imagesPath.length > 0) {
+            // Create sprite
+            this.createSpriteSheet(imagesData, ({ coordinates, properties, image }) => {
+              const spriteSource = new RawSource(image);
+              compilation.updateAsset(imagesPath[0], spriteSource);
+
+              // Remove all un-necessary assets
+              imagesPath.forEach((imagePath, idx) => {
+                if (idx > 0) compilation.deleteAsset(imagePath)
+              });
+
+              //Generate coordinate mapping
+              let coordinateMeta = {};
+              coordinateMeta["width"] = properties.width;
+              coordinateMeta["height"] = properties.height;
+              coordinateMeta["frames"] = {};
+              Object.keys(coordinates).map(relativePath => {
+                coordinateMeta["frames"][path.basename(relativePath)] = coordinates[relativePath];
+              });
+
+              if (!this.isPrevMetadata(coordinateMeta)) {
+                writeFileSync(ShareStore.getDate(COORDINATE_PATH), JSON.stringify(coordinateMeta));
+              }
+              callback();
             });
-
-            //Update Coordinate asset
-            if (mappingPath?.length > 0) compilation.updateAsset(mappingPath[0], new RawSource(JSON.stringify(coordinateMeta)));
+          } else {
             callback();
-          });
+          }
         }
-      )
+      );
     })
   }
 }
