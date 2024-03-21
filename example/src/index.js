@@ -6,15 +6,14 @@ import AccountRemove from "./media/test_2.png";
 import Account from "./media/test_3.png";
 import transparent from "./media/transparent.png";
 
-
 const AppElement = () => {
-  console.log("ABC", G);
+  console.log("ABC", ABC);
   return (
     <div>
       <img src={ABC} />
-      <img src={transparent} />
-      {/* <img src={Account} />
-      <img src={addProfile} /> */}
+      {/* <img src={transparent} />
+      <img src={Account} />
+      <img src={AccountRemove} /> */}
     </div>
   );
 };

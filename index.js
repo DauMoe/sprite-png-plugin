@@ -1,4 +1,7 @@
-const spritesheet = require("spritesheet-js");
+const Spritesmith = require("spritesmith");
+const Vinyl = require("vinyl");
+const { RawSource } = require("webpack-sources");
+const path = require("path");
 
 const _PACKAGE_NAME = "SpritePNG_Plugin";
 
@@ -9,45 +12,68 @@ const _PACKAGE_NAME = "SpritePNG_Plugin";
  */
 
 module.exports = class SpritePNG_Plugin {
-  constructor(options = {}) {
-    this.relativePaths        = options.relativePaths; // list relative png paths that will be combine into sprite
-    this.outputDir            = options.outputDir;
-    // this.manifestFileName     = this.getManifestFileName(options.manifestFileName);
-    this.spriteSheetName      = options.spriteSheetName;
-    // this.relativeManifestPath = path.join(this.outputDir, this.manifestFileName);
-    // this.relativeSpritePath   = path.join(this.outputDir, this.spriteFileName);
+  constructor(option = {}) {
+    this.spriteSheetName      = option.spriteSheetName;
+    this._outputPath = option.outputPath;
+    this._outputDir = null;
+    this._publicPath = null;
   }
 
   isPng = (filePath) => filePath?.endsWith('.png');
 
+  createSpriteSheet(imagesData, callback) {
+    Spritesmith.run({
+      src: imagesData
+    }, (err, result) => {
+      if (err) throw err;
+      callback(result)
+    })
+  }
+
+  createMappingFile() {
+    // if (!fs.existsSync(this.outputDir)) {
+    //   fs.mkdirSync(this.outputDir);
+    //   fs.writeFileSync(path.join(this.outputDir, `${this.spriteSheetName}.json`), "", { encoding: "utf-8" });
+    // }
+  }
+
   apply(compiler) {
+    //Refer: https://github.com/DauMoe/image-sprite-webpack-plugin
     compiler.hooks.thisCompilation.tap({ name: _PACKAGE_NAME }, (compilation) => {
-      // Start creating SVG sprite sheet after all assets are move to chunk
-      compilation.hooks.processAssets.tap(
+
+      this._outputDir = this._outputPath
+          ? path.resolve(process.cwd(), this._outputPath)
+          : compiler.outputPath;
+      
+      this._publicPath = compilation.outputOptions.publicPath;
+
+      compilation.hooks.processAssets.tapAsync(
         {
           name: _PACKAGE_NAME,
-          stage: "PROCESS_ASSETS_STAGE_OPTIMIZE"
+          stage: "PROCESS_ASSETS_STAGE_ADDITIONAL"
         },
-        (assets) => {
-          /**
-           * @NOTE
-           *  - EXEC get from "node:child-process" instead of "platform-command"
-           */
-
-          /**
-           * @todo
-           *  - [ ] Get relative path from assets or chunks instead of pass as prop
-           *  - [ ] How can I import sprite and json into js file if they are emitted to asset in webpack hooks?
-           */
-
-          // Lib option: https://github.com/krzysztof-o/spritesheet.js/blob/master/index.js#L166
-          spritesheet(this.relativePaths.filter(this.isPng), {
-            format: "json",
-            path: this.outputDir,
-            name: this.spriteSheetName
-          }, err => {
-            if (err) throw err;
-            console.log("________ GENERATED _________");
+        (assets, callback) => {
+          const imagesPath = Object.keys(assets).filter(this.isPng);
+          const imagesData = imagesPath.map(assetPath => new Vinyl({
+            path: path.join(this._outputDir, assetPath),
+            contents: assets[assetPath].source()
+          }));
+          this.createSpriteSheet(imagesData, ({ coordinates, properties, image }) => {
+            const spriteSource = new RawSource(image);
+            // imagesPath.forEach(imagePath => compilation.updateAsset(imagePath, spriteSource));
+            compilation.updateAsset(imagesPath[0], spriteSource);
+            //Generate coordinate mapping
+            let coordinateMeta = {};
+            coordinateMeta["width"] = properties.width;
+            coordinateMeta["height"] = properties.height;
+            coordinateMeta["frames"] = {};
+            Object.keys(coordinates).map(relativePath => {
+              coordinateMeta["frames"][path.basename(relativePath)] = coordinates[relativePath];
+            });
+            console.log(compilation.getAssets());
+            //Update Coordinate asset
+            // compilation.emitAsset("test.json", JSON.stringify(coordinateMeta));
+            callback();
           });
         }
       )

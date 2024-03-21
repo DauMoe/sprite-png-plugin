@@ -24,6 +24,13 @@ const spriteDir = path.join(sourcePath, "media", "sprite");
 const spriteSheetName = "ahh";
 let listPath = [];
 
+const spritePlugin = new SpritePNG_Plugin({
+    // relativePaths: listPath,
+    outputDir: spriteDir,
+});
+
+spritePlugin.createMappingFile();
+
 module.exports = {
     mode: isProd ? "production" : "development",
     entry: {
@@ -60,31 +67,23 @@ module.exports = {
             {
                 test: /\.png$/,
                 type: 'asset/resource',
-                use: [
-                    // {
-                    //     loader: 'file-loader',
-                    //     options: {
-                    //         name(resourcePath, resourceQuery) {
-                    //             console.log("GGG", resourcePath);
-                    //             return '[name].[ext]';
-                    //         },
-                    //     },
+                // use: [
                     // }
-                    {
-                        loader: "file-replace-loader",
-                        options: {
-                            condition: 'if-replacement-exists',
-                            replacement(resourcePath) {
-                                // Match sprite sheet regex
-                                if (resourcePath) {
-                                    listPath.push(resourcePath);
-                                    return path.join(spriteDir, spriteName)
-                                }
-                                return resourcePath
-                            }
-                        }
-                    }
-                ]
+                    // {
+                    //     loader: "file-replace-loader",
+                    //     options: {
+                    //         condition: 'if-replacement-exists',
+                    //         replacement(resourcePath) {
+                    //             // Match sprite sheet regex
+                    //             if (resourcePath) {
+                    //                 // listPath.push(resourcePath);
+                    //                 return path.join(spriteDir, `${spriteSheetName}.png`)
+                    //             }
+                    //             return resourcePath
+                    //         }
+                    //     }
+                    // }
+                // ]
             }
         ]
     },
@@ -93,11 +92,7 @@ module.exports = {
             filename: "new-index.html",
             template: "index.html"
         }),
-        new SpritePNG_Plugin({
-            relativePaths: listPath,
-            outputDir: spriteDir,
-            spriteSheetName: spriteSheetName
-        })
+        spritePlugin
     ],
     devServer: {
         static: {
