@@ -55,15 +55,6 @@ module.exports = {
                 }
             },
             {
-                test: /\.json$/,
-                use: [{
-                    loader: 'sprite-loader',
-                    options: {
-                        coordinateFileName: "coordinateMapping.json"
-                    }
-                }]
-            },
-            {
                 test: /\.png$/,
                 type: 'asset/resource',
             }
@@ -76,11 +67,6 @@ module.exports = {
         }),
         new SpritePNG_Plugin()
     ],
-    resolveLoader: {
-        alias: {
-            'sprite-loader': path.join(__dirname, "..", "loader.js")
-        }
-    },
     devServer: {
         static: {
             directory: path.join(__dirname, 'dist'),
@@ -89,4 +75,3 @@ module.exports = {
         port: 9000,
     },
 };
-
