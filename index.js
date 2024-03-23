@@ -1,12 +1,7 @@
 const Spritesmith = require("spritesmith");
 const Vinyl = require("vinyl");
-const { RawSource } = require("webpack-sources");
 const path = require("path");
-const { writeFileSync } = require("fs");
-const isEqual = require("./utils/lodashIsEqual");
-const cloneDeep = require("./utils/lodashCloneDeep");
-const ShareStore = require("./store");
-const { COORDINATE_PATH } = require("./constant");
+const VirtualModulesPlugin = require('webpack-virtual-modules');
 
 const _PACKAGE_NAME = "SpritePNG_Plugin";
 
@@ -48,14 +43,16 @@ module.exports = class SpritePNG_Plugin {
     if (isArr) return !this._includes.includes(filePath);
   }
 
-  isPrevMetadata(newSource) {
-    const equal = isEqual(this._coordinateMeta, newSource);
-    if (!equal) this._coordinateMeta = cloneDeep(newSource);
-    return equal;
-  }
-
   apply(compiler) {
+    const virtualModules = new VirtualModulesPlugin({
+      "src/test.json": "{}"
+    });
+
+    virtualModules.apply(compiler);
+
     compiler.hooks.thisCompilation.tap({ name: _PACKAGE_NAME }, (compilation) => {
+      const RawSource = compilation.compiler.webpack.sources.RawSource
+
       this._outputDir = this._outputPath
           ? path.resolve(process.cwd(), this._outputPath)
           : compiler.outputPath;
@@ -69,9 +66,6 @@ module.exports = class SpritePNG_Plugin {
           stage: compilation.PROCESS_ASSETS_STAGE_ADDITIONAL,
         },
         (assets, callback) => {
-          this._coordinateRelativePath = ShareStore.getData(COORDINATE_PATH);
-          if (!this._coordinateRelativePath) throw Error('Create an unique coordinate json file first');
-
           const imagesPath = Object.keys(assets).filter(filePath => this.inWhiteList(filePath) && this.isPng(filePath));
 
           // Create image File Buffer
@@ -99,11 +93,7 @@ module.exports = class SpritePNG_Plugin {
               Object.keys(coordinates).map(relativePath => {
                 coordinateMeta["frames"][path.basename(relativePath)] = coordinates[relativePath];
               });
-
-              if (!this.isPrevMetadata(coordinateMeta)) {
-                writeFileSync(this._coordinateRelativePath, JSON.stringify(coordinateMeta));
-                ShareStore.clearStore();
-              }
+              virtualModules.writeModule('src/test.json', JSON.stringify(coordinateMeta));
               callback();
             });
           } else {

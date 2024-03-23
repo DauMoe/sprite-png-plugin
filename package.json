@@ -1,25 +1,23 @@
 {
-  "name": "spritesvgplugin",
+  "name": "sprite_png_plugin",
   "version": "0.0.1",
-  "description": "SVG Sprite for LightningJs",
+  "description": "PNG Sprite for LightningJs",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [
     "sprite",
-    "svg",
+    "png",
+    "image",
     "lightningjs"
   ],
   "author": "hoang",
   "license": "MIT",
   "dependencies": {
-    "spritesheet-js": "^1.2.8",
     "spritesmith": "^3.3.1",
-    "svg-sprite": "^2.0.3",
     "vinyl": "^2.1.0",
     "webpack": "^5.90.3",
-    "webpack-sources": "^3.2.3",
-    "xml2js": "^0.6.2"
+    "webpack-virtual-modules": "^0.6.1"
   }
 }
