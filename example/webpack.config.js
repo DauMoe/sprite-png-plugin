@@ -1,8 +1,13 @@
 const path = require("path");
 const HtmlWebpackPlugin = require('html-webpack-plugin');
-const SpritePNG_Plugin = require("../index");
+const SpritePNG = require("../index");
 
 const subStylePaths = [];
+
+const spriter = new SpritePNG({
+    manifestFileName: "./src",
+    includes: /^src\/media\/.*$/
+});
 
 const setupCacheGroups = () => {
     return subStylePaths.reduce((acc, cur) => {
@@ -57,15 +62,32 @@ module.exports = {
             {
                 test: /\.png$/,
                 type: 'asset/resource',
+                // use: [{
+                //     loader: spriter.loader(),
+                // }]
+
+                // use: [{
+                //     loader: "file-replace-loader",
+                //     options: {
+                //         condition: 'always',
+                //         async: true,
+                //         replacement: path.join(__dirname, "src/another/test_2.png")
+                //     }
+                // }]
             }
         ]
     },
+    stats: {
+        errors: true,
+        errorStack: true,
+        errorDetails: true, // --display-error-details
+    },
     plugins: [
         new HtmlWebpackPlugin({
-            filename: "new-index.html",
+            filename: "index.html",
             template: "index.html"
         }),
-        new SpritePNG_Plugin()
+        spriter
     ],
     devServer: {
         static: {
