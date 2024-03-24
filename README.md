@@ -16,7 +16,9 @@ return (
 ```js
 const SpritePNG = require("sprite-png-plugin");
 ...
-const spriter = new SpritePNG();
+const spriter = new SpritePNG({
+  manifestFileName: "src/asset/manifest.json" // Path to generate manifest file
+});
 
 ...
 module.exports = {
@@ -47,7 +49,7 @@ module.exports = {
 |----------------------|-------------------------|----------|---------------------|--------------------------------------------------------------|
 | **outputPath**       | `string`                | No       | Webpack output path | Your output build path. Default will get from webpack output |
 | **includes**         | `RegExp` &#124; `Array` | No       | `undefined`         | Reg to filter the images for sprite                          |
-| **manifestFileName** | `string`                | No       | `manifest.json`     | Coordinate file name                                         |
+| **manifestFileName** | `string`                | No       | `manifest.json`     | Coordinate file name (path name is accepted)                 |
   
 ## Inspiration by:
 - [image-sprite-webpack-plugin](https://github.com/naver/image-sprite-webpack-plugin)
