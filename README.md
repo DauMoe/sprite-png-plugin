@@ -1,4 +1,4 @@
-# PNG Sprite creator
+# Sprite PNG plugin
 Webpack plugin helps to create PNG sprite image and coordinate mapping file (`manifest.json`)
 ## Usage:
 Suppose you want a manifest.json file in `src/asset/manifest.json`. You can import it into any place without creating it, plugin will handle that  
