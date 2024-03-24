@@ -6,7 +6,7 @@ const subStylePaths = [];
 
 const spriter = new SpritePNG({
     manifestFileName: "./src",
-    includes: /^src\/media\/.*$/
+    // includes: /^src\/media\/.*$/
 });
 
 const setupCacheGroups = () => {

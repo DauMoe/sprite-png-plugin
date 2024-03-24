@@ -6,10 +6,10 @@ import AccountRemove from "./another/test_2.png";
 import Account from "./another/test_3.png";
 import ABC_1 from "./another/test_1.png";
 import transparent from "./media/transparent.png";
-// import * as data from "./manifest.json";
+import * as data from "./manifest.json";
 
 const AppElement = () => {
-  // console.log("ABC", data);
+  console.log("ABC", data?.frames);
   return (
     <div>
       <p>Tes_1</p>
