@@ -1,5 +1,5 @@
 {
-  "name": "sprite_png_plugin",
+  "name": "@daumoe/sprite-png-plugin",
   "version": "0.0.1",
   "description": "PNG Sprite for LightningJs",
   "main": "index.js",
@@ -19,5 +19,17 @@
     "vinyl": "^2.1.0",
     "webpack": "^5.90.3",
     "webpack-virtual-modules": "^0.6.1"
-  }
+  },
+  "directories": {
+    "example": "example"
+  },
+  "devDependencies": {},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/DauMoe/sprite-png-plugin.git"
+  },
+  "bugs": {
+    "url": "https://github.com/DauMoe/sprite-png-plugin/issues"
+  },
+  "homepage": "https://github.com/DauMoe/sprite-png-plugin#readme"
 }
