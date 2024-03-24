@@ -115,7 +115,7 @@ module.exports = class SpritePNG_Plugin {
             path: path.join(this._outputDir, assetPath),
             contents: assets[assetPath].source()
           }));
-          console.log("imagesPath", imagesPath);
+
           if (imagesPath.length > 0) {
             // Create sprite
             this.#createSpriteSheet(imagesData, ({ coordinates, properties, image }) => {

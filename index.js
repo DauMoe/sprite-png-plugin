@@ -1,7 +1,7 @@
-const plugin = require("./plugin");
+// const plugin = require("./plugin");
 // const _loader = require("./loader");
 
-const SpritePng = plugin;
+// const SpritePng = plugin;
 
 // SpritePng.prototype.loader = function() {
 //   return require.resolve("./loader");
@@ -9,4 +9,4 @@ const SpritePng = plugin;
 
 // SpritePng.loader = SpritePng.prototype.loader.bind(_loader);
 
-module.exports = SpritePng;
+module.exports = require("./plugin");
