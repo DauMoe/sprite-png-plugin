@@ -1,5 +1,5 @@
 # Sprite PNG plugin
-Webpack plugin helps to create PNG sprite image and coordinate mapping file (`manifest.json`)
+Webpack plugin uses [Spritesmith](https://github.com/twolfson/spritesmith) to helping create PNG sprite image and coordinate mapping file (`manifest.json`)
 ## Usage:
 - Make sure your assets in `png` format. You can use converter tool online. DO NOT change file extension name directly (I do it and got error `Invalid signature`)  
 - The manifest path should be relative path from current webpack config container directory  
