@@ -9,7 +9,6 @@ const Spritesmith = require("spritesmith");
 const Vinyl = require("vinyl");
 const path = require("path");
 const VirtualModulesPlugin = require('webpack-virtual-modules');
-const { lstatSync } = require("fs");
 
 const _PACKAGE_NAME = "SpritePNG_Plugin";
 
@@ -41,9 +40,7 @@ module.exports = class SpritePNG_Plugin {
 
   #getManifestPath(manifestPath) {
     if (!manifestPath) return "./manifest.json";
-    const stats = lstatSync(manifestPath);
-    if (stats.isDirectory()) return path.join(manifestPath, "manifest.json");
-    if (stats.isFile() && this.#isSVG(manifestPath)) return manifestPath += ".json";
+    if (this.#isSVG(manifestPath)) return manifestPath += ".json";
     return manifestPath;
   }
 
