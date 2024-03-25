@@ -22,7 +22,7 @@ Webpack plugin helps to create PNG sprite image and coordinate mapping file (`ma
 ```js
 import React from "react";
 ...
-import * as mappingData from "src/assets/manifest.json"; // no need to create this file. Just remember the path
+import * as mappingData from "./assets/manifest.json"; // no need to create this file. Just remember the path
 
 return (
   <YourComponent>
@@ -34,7 +34,7 @@ return (
 const SpritePNG = require("sprite-png-plugin");
 ...
 const spriter = new SpritePNG({
-  manifestFileName: "./assets/manifest.json" // Path to generate manifest file
+  manifestFileName: "./src/assets/manifest.json" // Path to generate manifest file
 });
 
 ...
