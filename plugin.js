@@ -40,11 +40,11 @@ module.exports = class SpritePNG_Plugin {
 
   #getManifestPath(manifestPath) {
     if (!manifestPath) return "./manifest.json";
-    if (this.#isSVG(manifestPath)) return manifestPath += ".json";
+    if (this.#isJSON(manifestPath)) return manifestPath += ".json";
     return manifestPath;
   }
 
-  #isSVG = (filePath) => filePath?.endsWith(".svg");
+  #isJSON = (filePath) => filePath?.endsWith(".json");
 
   #isPng = (filePath) => filePath?.endsWith(".png");
 
