@@ -5,6 +5,36 @@ Webpack plugin uses [Spritesmith](https://github.com/twolfson/spritesmith) to he
 - The manifest path should be relative path from current webpack config container directory  
 - Manifest file will be generated automatically. You must remember exactly where it is. Help you a lot to import it into code base  
   
+## Options:  
+| Option               | Type                    | Required | Default             | Description                                                  |
+|----------------------|-------------------------|----------|---------------------|--------------------------------------------------------------|
+| **outputPath**       | `string`                | No       | Webpack output path | Your output build path. Default will get from webpack output |
+| **includes**         | `RegExp` &#124; `Array` | No       | `undefined`         | Reg to filter the images for sprite                          |
+| **manifestFileName** | `string`                | No       | `manifest.json`     | Coordinate file name (path name is accepted)                 |
+  
+## Manifest content format
+```yaml
+{
+  "width": <number>,
+  "height": <number>,
+  "frames": {
+    [image_1_name]: {
+      "width": <number>,
+      "height": <number>,
+      "x": <number>
+      "y": <number>
+    },
+    [image_2_name]: {
+      ...so_on
+    },
+    ...
+  }
+}
+```
+- **width**: sprite sheet width
+- **height**: sprite sheet height
+- **frames**: contain each images coordinate (x, y, w, h)
+  
 ## Example
 **Folder structure**  
 ```
@@ -59,14 +89,6 @@ module.exports = {
   }
 }
 ```
-
-## Options:  
-  
-| Option               | Type                    | Required | Default             | Description                                                  |
-|----------------------|-------------------------|----------|---------------------|--------------------------------------------------------------|
-| **outputPath**       | `string`                | No       | Webpack output path | Your output build path. Default will get from webpack output |
-| **includes**         | `RegExp` &#124; `Array` | No       | `undefined`         | Reg to filter the images for sprite                          |
-| **manifestFileName** | `string`                | No       | `manifest.json`     | Coordinate file name (path name is accepted)                 |
   
 ## Inspiration by:
 - [image-sprite-webpack-plugin](https://github.com/naver/image-sprite-webpack-plugin)
