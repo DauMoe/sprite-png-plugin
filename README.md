@@ -49,7 +49,7 @@ Webpack plugin uses [Spritesmith](https://github.com/twolfson/spritesmith) to he
 └── webpack.config.js
 ```
 
-**main.js**
+**index.js**
 ```js
 import React from "react";
 ...
