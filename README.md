@@ -1,11 +1,28 @@
 # Sprite PNG plugin
 Webpack plugin helps to create PNG sprite image and coordinate mapping file (`manifest.json`)
 ## Usage:
-Suppose you want a manifest.json file in `src/asset/manifest.json`. You can import it into any place without creating it, plugin will handle that  
+- Make sure your assets in `png` format. You can use converter tool online. DO NOT change file extension name directly (I do it and got error `Invalid signature`)  
+- The manifest path should be relative path from current webpack config container directory  
+- Manifest file will be generated automatically. You must remember exactly where it is. Help you a lot to import it into code base  
+  
+## Example
+**Folder structure**  
+```
+├── code_base/
+│   └── src/
+│       ├── index.js
+│       └── assets/
+│           ├── image_1.png
+│           ├── image_2.png
+│           └── ...
+└── webpack.config.js
+```
+
+**main.js**
 ```js
 import React from "react";
 ...
-import * as mappingData from "src/asset/manifest.json"; // no need to create this file. Just remember the path
+import * as mappingData from "src/assets/manifest.json"; // no need to create this file. Just remember the path
 
 return (
   <YourComponent>
@@ -17,7 +34,7 @@ return (
 const SpritePNG = require("sprite-png-plugin");
 ...
 const spriter = new SpritePNG({
-  manifestFileName: "src/asset/manifest.json" // Path to generate manifest file
+  manifestFileName: "./assets/manifest.json" // Path to generate manifest file
 });
 
 ...
