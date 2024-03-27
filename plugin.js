@@ -6,10 +6,12 @@
  */
 
 const Spritesmith = require("spritesmith");
-const Vinyl = require("vinyl");
+// const Vinyl = require("vinyl");
 const path = require("path");
-const VirtualModulesPlugin = require('webpack-virtual-modules');
+// const VirtualModulesPlugin = require('webpack-virtual-modules');
 const { existsSync, lstatSync } = require("fs");
+const gaze = require("gaze");
+const fs = require('fs');
 
 const _PACKAGE_NAME = "SpritePNG_Plugin";
 
@@ -26,10 +28,11 @@ const defaultOptions = {
   outputPath: undefined,
   includes: undefined,
   manifestFileName: "manifest.json"
-}
+};
 
 module.exports = class SpritePNG_Plugin {
   constructor(option = defaultOptions) {
+    this._entryPath = option.entry;
     this._outputPath = option.outputPath;
     this._includes = option.includes; // Reg and Reg Array are allowed
     this._manifestPath = this.#getManifestPath(option.manifestFileName);
@@ -48,7 +51,6 @@ module.exports = class SpritePNG_Plugin {
       if (lstatSync(manifestPath).isDirectory()) manifestPath = path.join(manifestPath, "manifest.json");
     }
     if (!this.#isJSON(manifestPath)) return manifestPath += ".json";
-    console.log("MANIFEST FILE AT", manifestPath);
     return manifestPath;
   }
 
@@ -61,17 +63,17 @@ module.exports = class SpritePNG_Plugin {
       src: imagesData
     }, (err, result) => {
       if (err) throw err;
-      callback(result)
-    })
+      callback(result);
+    });
   }
 
   #inWhiteList(filePath) {
     if (!this._includes) return true;
     const isRegExp = this._includes instanceof RegExp;
     const isArr = Array.isArray(this._includes);
-    
+
     if (!(isRegExp || isArr)) throw Error(`"includes" can be "RegExp" or "RegExp Array" only but received "${typeof this._includes}"`);
-    
+
     const posixPath = filePath.split(path.sep).join(path.posix.sep);
     if (isRegExp) return this._includes.test(posixPath);
     if (isArr) {
@@ -84,21 +86,58 @@ module.exports = class SpritePNG_Plugin {
     return false;
   }
 
+  getWatcher(cb) {
+    if (this._watcher) {
+      cb && cb(undefined, this._watcher);
+    } else {
+      this._watcher = gaze(
+        this._entryPath, {},
+        (err, watcher) => {
+          watcher.on('end', () => {
+            this._watcher = null;
+          });
+          cb && cb(err, watcher);
+        }
+      );
+    }
+    return this._watcher;
+  }
+
+  getSpriteName(relativePath) {
+    const name = relativePath.split(`\\`).splice(-1)[0].split(".").splice(0)[0];
+    return name;
+  }
+
+  writeFileR = async (...args) => {
+    const fileName = args[0];
+    await promiseCall(mkdirp, path.dirname(fileName));
+    return fs.writeFile(...args);
+  };
+
   apply(compiler) {
     // Create virtual manifest file in memory (maybe?)
-    const virtualModules = new VirtualModulesPlugin({
-      [this._manifestPath]: "{}"
-    });
+    // const virtualModules = new VirtualModulesPlugin({
+    //   [this._manifestPath]: "{}"
+    // });
 
-    virtualModules.apply(compiler);
+    // virtualModules.apply(compiler);
+    // this._hook(compiler, 'run', 'run',
+    //   (compiler, cb) => {
+    //     this.compile(() => {
+    //       // without closing the gaze instance, the build will never finish
+    //       this.getWatcher().close();
+    //       cb();
+    //     });
+    //   }
+    // );
 
     compiler.hooks.thisCompilation.tap({ name: _PACKAGE_NAME }, (compilation) => {
-      const RawSource = compilation.compiler.webpack.sources.RawSource
+      const RawSource = compilation.compiler.webpack.sources.RawSource;
 
       this._outputDir = this._outputPath
-          ? path.resolve(process.cwd(), this._outputPath)
-          : compiler.outputPath;
-      
+        ? path.resolve(process.cwd(), this._outputPath)
+        : compiler.outputPath;
+
       this._publicPath = compilation.outputOptions.publicPath;
 
       // Use "tapAsync" instead of "tap" because create sprite is async function
@@ -108,35 +147,59 @@ module.exports = class SpritePNG_Plugin {
           stage: compilation.PROCESS_ASSETS_STAGE_ADDITIONAL,
         },
         (_, callback) => {
-          const imageModules = compilation.modules.filter(module => this.#inWhiteList(module?.resourceResolveData?.relativePath) && this.#isPng(module?.resourceResolveData?.relativePath));
-          const imagesAbsPath = imageModules.map(module => module?.resource);
-          
-          if (imagesAbsPath.length > 0) {
-            // Create sprite
-            this.#createSpriteSheet(imagesAbsPath, ({ coordinates, properties, image }) => {
-              /**
-               * @TODO 
-               *  - [ ] Create sprite image using webpack-virtual-modules
-               *  - [ ] Update sprite image
-               *  - [ ] Import sprite into code base without error
-               */
-
-              //Generate coordinate mapping
-              let coordinateMeta = {};
-              coordinateMeta["width"] = properties.width;
-              coordinateMeta["height"] = properties.height;
-              coordinateMeta["frames"] = {};
-              Object.keys(coordinates).map(relativePath => {
-                coordinateMeta["frames"][path.basename(relativePath)] = coordinates[relativePath];
-              });
-              virtualModules.writeModule(this._manifestPath, JSON.stringify(coordinateMeta));
-              callback();
-            });
-          } else {
+          const sourceImagesByFolder = this.getWatcher().watched();
+          const allSourceImages = Object.values(sourceImagesByFolder).reduce((allFiles, files) => [...allFiles, ...files], []);
+          if (!allSourceImages || !allSourceImages.length) {
             callback();
+          } else {
+            const spriteNames = allSourceImages.reduce((allSources, sourceImage) => {
+              const spriteName = this.getSpriteName(sourceImage);
+              allSources[spriteName] = sourceImage;
+              return allSources;
+            }, {});
+
+            this.#createSpriteSheet(Object.values(spriteNames), ({ coordinates, properties, image }) => {
+              for (let i in spriteNames) {
+                spriteNames[i] = coordinates[spriteNames[i]];
+              }
+              fs.writeFileSync("src/sprite-sheet/manifest.json", JSON.stringify(spriteNames), "utf8");
+              fs.writeFileSync("src/sprite-sheet/gen.png", image, "binary");
+              callback();
+              this.getWatcher().close();
+            });
           }
+
+
+          // const imageModules = compilation.modules.filter(module => this.#inWhiteList(module?.resourceResolveData?.relativePath) && this.#isPng(module?.resourceResolveData?.relativePath));
+          // const imagesAbsPath = imageModules.map(module => module?.resource);
+          // console.log("?imageModules", imagesAbsPath);
+          // if (imagesAbsPath.length > 0) {
+          //   // Create sprite
+          //   this.#createSpriteSheet(imagesAbsPath, ({ coordinates, properties, image }) => {
+          //     /**
+          //      * @TODO 
+          //      *  - [ ] Create sprite image using webpack-virtual-modules
+          //      *  - [ ] Update sprite image
+          //      *  - [ ] Import sprite into code base without error
+          //      */
+          //     console.log("?coordinates", coordinates);
+          //     //Generate coordinate mapping
+          //     let coordinateMeta = {};
+          //     coordinateMeta["width"] = properties.width;
+          //     coordinateMeta["height"] = properties.height;
+          //     coordinateMeta["frames"] = {};
+          //     Object.keys(coordinates).map(relativePath => {
+          //       coordinateMeta["frames"][path.basename(relativePath)] = coordinates[relativePath];
+          //     });
+          //     virtualModules.writeModule(this._manifestPath, JSON.stringify(coordinateMeta));
+          //     callback();
+          //   });
+          // } else {
+          //   callback();
+          // }
         }
       );
-    })
+    });
   }
-}
+
+};
