@@ -9,7 +9,7 @@ const Spritesmith = require("spritesmith");
 const Vinyl = require("vinyl");
 const path = require("path");
 const VirtualModulesPlugin = require('webpack-virtual-modules');
-const { lstatSync } = require("fs");
+const { existsSync, lstatSync } = require("fs");
 
 const _PACKAGE_NAME = "SpritePNG_Plugin";
 
@@ -40,14 +40,19 @@ module.exports = class SpritePNG_Plugin {
   }
 
   #getManifestPath(manifestPath) {
+    // Not defined
     if (!manifestPath) return "./manifest.json";
-    const stats = lstatSync(manifestPath);
-    if (stats.isDirectory()) return path.join(manifestPath, "manifest.json");
-    if (stats.isFile() && this.#isSVG(manifestPath)) return manifestPath += ".json";
+
+    //Checking if it's dir path, adding manifest file name
+    if (existsSync(manifestPath)) {
+      if (lstatSync(manifestPath).isDirectory()) manifestPath = path.join(manifestPath, "manifest.json");
+    }
+    if (!this.#isJSON(manifestPath)) return manifestPath += ".json";
+    console.log("MANIFEST FILE AT", manifestPath);
     return manifestPath;
   }
 
-  #isSVG = (filePath) => filePath?.endsWith(".svg");
+  #isJSON = (filePath) => filePath?.endsWith(".json");
 
   #isPng = (filePath) => filePath?.endsWith(".png");
 
@@ -60,28 +65,23 @@ module.exports = class SpritePNG_Plugin {
     })
   }
 
-  #inWhiteList(compilation, filePath) {
-    const sourceFileName = this.#getSourceFileName(compilation, filePath);
-    if (!sourceFileName) return false;
+  #inWhiteList(filePath) {
     if (!this._includes) return true;
     const isRegExp = this._includes instanceof RegExp;
     const isArr = Array.isArray(this._includes);
     
     if (!(isRegExp || isArr)) throw Error(`"includes" can be "RegExp" or "RegExp Array" only but received "${typeof this._includes}"`);
     
-    if (isRegExp) return this._includes.test(sourceFileName);
+    const posixPath = filePath.split(path.sep).join(path.posix.sep);
+    if (isRegExp) return this._includes.test(posixPath);
     if (isArr) {
       for (let idx = 0; idx < this._includes.length; idx++) {
         const it = this._includes[idx];
         if (!(it instanceof RegExp)) throw Error(`Item at ${idx} must be "RegExp" but received "${typeof it}"`);
-        if (it.test(sourceFileName)) return true;
+        if (it.test(posixPath)) return true;
       }
     }
     return false;
-  }
-
-  #getSourceFileName(compilation, assetPath) {
-    return compilation.assetsInfo.get(assetPath)?.sourceFilename;
   }
 
   apply(compiler) {
@@ -107,23 +107,19 @@ module.exports = class SpritePNG_Plugin {
           name: _PACKAGE_NAME,
           stage: compilation.PROCESS_ASSETS_STAGE_ADDITIONAL,
         },
-        (assets, callback) => {
-          const imagesPath = Object.keys(assets).filter(filePath => this.#inWhiteList(compilation, filePath) && this.#isPng(filePath));
-
-          // Create image File Buffer
-          const imagesData = imagesPath.map(assetPath => new Vinyl({
-            path: path.join(this._outputDir, assetPath),
-            contents: assets[assetPath].source()
-          }));
-          console.log("imagesPath", imagesPath);
-          if (imagesPath.length > 0) {
+        (_, callback) => {
+          const imageModules = compilation.modules.filter(module => this.#inWhiteList(module?.resourceResolveData?.relativePath) && this.#isPng(module?.resourceResolveData?.relativePath));
+          const imagesAbsPath = imageModules.map(module => module?.resource);
+          
+          if (imagesAbsPath.length > 0) {
             // Create sprite
-            this.#createSpriteSheet(imagesData, ({ coordinates, properties, image }) => {
-              const spriteSource = new RawSource(image);
-
-              imagesPath.forEach(imgPath => {
-                  compilation.updateAsset(imgPath, spriteSource);
-              });
+            this.#createSpriteSheet(imagesAbsPath, ({ coordinates, properties, image }) => {
+              /**
+               * @TODO 
+               *  - [ ] Create sprite image using webpack-virtual-modules
+               *  - [ ] Update sprite image
+               *  - [ ] Import sprite into code base without error
+               */
 
               //Generate coordinate mapping
               let coordinateMeta = {};
