@@ -119,6 +119,7 @@ module.exports = class SpritePNG_Plugin {
                *  - [ ] Create sprite image using webpack-virtual-modules
                *  - [ ] Update sprite image
                *  - [ ] Import sprite into code base without error
+               *  - [ ] Generate mapping file if image file name is the same
                */
 
               //Generate coordinate mapping
