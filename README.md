@@ -5,7 +5,7 @@ Suppose you want a manifest.json file in `src/asset/manifest.json`. You can impo
 ```js
 import React from "react";
 ...
-import * as mappingData from "src/asset/manifest.json"; // no need to create this file. Just remember the path
+import { getIcon } from ...; // outputDir + getIcon.js
 
 return (
   <YourComponent>
@@ -16,26 +16,17 @@ return (
 ```js
 const SpritePNG = require("sprite-png-plugin");
 ...
-const spriter = new SpritePNG({
-  manifestFileName: "src/asset/manifest.json" // Path to generate manifest file
-});
 
 ...
 module.exports = {
   ...,
   module: {
     ...,
-    rules: [
-      ...,
-      {
-        test: /\.png$/,
-        type: 'asset/resource'
-      },
-      ...
-    ],
     plugins: [
       ...,
-      spriter,
+      new SpritePNG({
+        ...options
+      })
       ...
     ],
     ...
@@ -45,12 +36,8 @@ module.exports = {
 
 ## Options:  
   
-| Option               | Type                    | Required | Default             | Description                                                  |
-|----------------------|-------------------------|----------|---------------------|--------------------------------------------------------------|
-| **outputPath**       | `string`                | No       | Webpack output path | Your output build path. Default will get from webpack output |
-| **includes**         | `RegExp` &#124; `Array` | No       | `undefined`         | Reg to filter the images for sprite                          |
-| **manifestFileName** | `string`                | No       | `manifest.json`     | Coordinate file name (path name is accepted)                 |
-  
-## Inspiration by:
-- [image-sprite-webpack-plugin](https://github.com/naver/image-sprite-webpack-plugin)
-- [webpack-virtual-modules](https://github.com/sysgears/webpack-virtual-modules)
+| Option        | Type                                                          | Required | Default     | Description                            |
+| ------------- | ------------------------------------------------------------- | -------- | ----------- | -------------------------------------- |
+| **outputDir** | `String`                                                      | No       | ./          | Output directory for sprite sheet data |
+| **excludes**  | `RegExp` &#124; `Array`                                       | No       | `undefined` | Reg to filter the images for sprite    |
+| **entry**     | `String` &#124; `RegExp` &#124; `Array<String`&#124;`RegExp>` | No       | []          | images entry                           |
