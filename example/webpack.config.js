@@ -5,7 +5,8 @@ const SpritePNG = require("../index");
 const subStylePaths = [];
 
 const spriter = new SpritePNG({
-    entry: [ 'src/media/**/*', 'src/another/**/*'],
+    entry: [ 'src/media/**/*.png', 'src/another/**/*'],
+    excludes: /.*\/src\/another\/test_gl\.png$/,
     outputDir: "./src/sprite"
 });
 

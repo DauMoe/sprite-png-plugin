@@ -8,9 +8,8 @@ import { getIcon } from "./sprite/getIcon";
 // import ABC_1 from "./media/test_4.png";
 // import transparent from "./media/transparent.png";
 
-
 const AppElement = () => {
-  const icon1 = getIcon("account-green_");
+  const icon1 = getIcon(".png");
   return (
     <div>
       <p>Tes_1</p>
