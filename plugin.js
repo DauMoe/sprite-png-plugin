@@ -40,6 +40,7 @@ module.exports = class SpritePNG_Plugin {
     this._publicPath = null;
     this._coordinateMeta = null;
     this._coordinateRelativePath = null;
+    this._length = 0;
   }
 
   #getManifestPath(manifestPath) {
@@ -148,12 +149,13 @@ module.exports = class SpritePNG_Plugin {
         },
         (_, callback) => {
           const sourceImagesByFolder = this.getWatcher().watched();
-          const allSourceImages = Object.values(sourceImagesByFolder).reduce((allFiles, files) => [...allFiles, ...files], []);
-          if (!allSourceImages || !allSourceImages.length) {
+          const allSourceImages = Object.values(sourceImagesByFolder).reduce((allFiles, files) => [...allFiles, ...files], []).filter(file => file.endsWith('.png'));
+          if (!allSourceImages || !allSourceImages.length || allSourceImages.length === this._length) {
             callback();
           } else {
+            this._length = allSourceImages.length;
             const spriteNames = allSourceImages.reduce((allSources, sourceImage) => {
-              const spriteName = this.getSpriteName(sourceImage);
+              const spriteName = path.basename(sourceImage, ".png");
               allSources[spriteName] = sourceImage;
               return allSources;
             }, {});
@@ -162,8 +164,8 @@ module.exports = class SpritePNG_Plugin {
               for (let i in spriteNames) {
                 spriteNames[i] = coordinates[spriteNames[i]];
               }
-              fs.writeFileSync("src/sprite-sheet/manifest.json", JSON.stringify(spriteNames), "utf8");
-              fs.writeFileSync("src/sprite-sheet/gen.png", image, "binary");
+              fs.writeFileSync(this._outputPath + "/manifest.json", JSON.stringify(spriteNames), "utf8");
+              fs.writeFileSync(this._outputPath + "/sprite.png", image, "binary");
               callback();
               this.getWatcher().close();
             });
