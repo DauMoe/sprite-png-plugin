@@ -1,5 +1,6 @@
 import React from "react";
 import ReactDOM from "react-dom";
+import { getIcon } from "./sprite/getIcon";
 
 // import ABC from "./another/test_1.png";
 // import AccountRemove from "./another/test_2.png";
@@ -7,9 +8,9 @@ import ReactDOM from "react-dom";
 // import ABC_1 from "./media/test_4.png";
 // import transparent from "./media/transparent.png";
 
-import { getIcon } from "./util";
+
 const AppElement = () => {
-  const icon1 = getIcon("test_1");
+  const icon1 = getIcon("account-green_");
   return (
     <div>
       <p>Tes_1</p>

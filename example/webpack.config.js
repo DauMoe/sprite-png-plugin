@@ -5,9 +5,8 @@ const SpritePNG = require("../index");
 const subStylePaths = [];
 
 const spriter = new SpritePNG({
-    manifestFileName: "./src",
-    entry: [path.resolve(__dirname, 'src/media/*.png'), path.resolve(__dirname, 'src/another/*.png')],
-    // includes: /^src\/media\/.*$/
+    entry: [ 'src/media/**/*', 'src/another/**/*'],
+    outputDir: "./src/sprite"
 });
 
 const setupCacheGroups = () => {
