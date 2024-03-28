@@ -4,12 +4,6 @@ const SpritePNG = require("../index");
 
 const subStylePaths = [];
 
-const spriter = new SpritePNG({
-    entry: [ 'src/media/**/*.png', 'src/another/**/*'],
-    excludes: /.*\/src\/another\/test_gl\.png$/,
-    outputDir: "./src/sprite"
-});
-
 const setupCacheGroups = () => {
     return subStylePaths.reduce((acc, cur) => {
         acc[cur.name] = {
@@ -63,18 +57,6 @@ module.exports = {
             {
                 test: /\.png$/,
                 type: 'asset/resource',
-                // use: [{
-                //     loader: spriter.loader(),
-                // }]
-
-                // use: [{
-                //     loader: "file-replace-loader",
-                //     options: {
-                //         condition: 'always',
-                //         async: true,
-                //         replacement: path.join(__dirname, "src/another/test_2.png")
-                //     }
-                // }]
             }
         ]
     },
@@ -88,7 +70,11 @@ module.exports = {
             filename: "index.html",
             template: "index.html"
         }),
-        spriter
+        new SpritePNG({
+            entry: [ 'src/media/**/*.png', 'src/another/**/*'],
+            excludes: /.*\/src\/another\/test_gl\.png$/,
+            outputDir: "./src/sprite"
+        })
     ],
     devServer: {
         static: {
