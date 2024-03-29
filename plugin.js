@@ -154,27 +154,22 @@ module.exports = class SpritePNG_Plugin {
   }
 
   apply(compiler) {
-    const isProd          = compiler.options.mode === "production";
-    const spriteProcess   = this.#spriteProcess.bind(this);
-    const pathEqual       = this.#pathEqual.bind(this);
-    const spriteImagePath = this.#spriteImagePath;
-    const manifestPath    = this.#manifestPath;
-    const isPng           = this.#isPng.bind(this);
+    const isProd = compiler.options.mode === "production";
 
-    this.#gazeIns.on("ready", spriteProcess);
+    this.#gazeIns.on("ready", this.#spriteProcess.bind(this));
 
     if (isProd) this.#gazeIns.close();
     else {
       // Listening files changed
-      this.#gazeIns.on("all", function(event, filePath) {
+      this.#gazeIns.on("all", (event, filePath) => {
         if (
           event !== "renamed" && 
           this.#notExcludes(filePath) && 
-          !pathEqual(filePath, spriteImagePath) && 
-          !pathEqual(filePath, manifestPath) && 
-          isPng(filePath)
+          !this.#pathEqual(filePath, this.#spriteImagePath) && 
+          !this.#pathEqual(filePath, this.#manifestPath) && 
+          this.#isPng(filePath)
         ) {
-          spriteProcess();
+          this.#spriteProcess();
         }
       });
     }
