@@ -67,7 +67,10 @@ module.exports = class SpritePNG_Plugin {
        * @return {Icon}
       */
       export const getIcon = (iconName) => {
-          return manifest[iconName]
+          return {
+            src: sprite,
+            ...manifest[iconName]
+          }
       };`
     )
   }
