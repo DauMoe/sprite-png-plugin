@@ -57,8 +57,8 @@ module.exports = class SpritePNG_Plugin {
        * @property {string} url
        * @property {number} x 
        * @property {number} y
-       * @property {number} width
-       * @property {number} height
+       * @property {number} w
+       * @property {number} h
       */
 
       /**
@@ -134,8 +134,8 @@ module.exports = class SpritePNG_Plugin {
             metadata[fileName] = {
               x: coordinates[filePath].x,
               y: coordinates[filePath].y,
-              width: coordinates[filePath].width,
-              height: coordinates[filePath].height
+              w: coordinates[filePath].width,
+              h: coordinates[filePath].height
             }
           })
           Promise.all([
