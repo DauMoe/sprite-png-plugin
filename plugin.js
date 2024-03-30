@@ -6,11 +6,12 @@
  */
 
 const Spritesmith = require("spritesmith");
-const Vinyl = require("vinyl");
 const path = require("path");
-const VirtualModulesPlugin = require('webpack-virtual-modules');
+const { existsSync, lstatSync, writeFile: fsWriteFile, mkdirSync } = require("fs");
+const { Gaze } = require("gaze");
+const util = require("util");
 
-const _PACKAGE_NAME = "SpritePNG_Plugin";
+const writeFile = util.promisify(fsWriteFile)
 
 /**
  * @_DEV_REFERENCE
@@ -21,123 +22,159 @@ const _PACKAGE_NAME = "SpritePNG_Plugin";
  *  - Usage webpack-virtual-modules: https://github.com/sysgears/webpack-virtual-modules/blob/master/examples/swagger-webpack4/webpack.config.js
  */
 
-const defaultOptions = {
-  outputPath: undefined,
-  includes: undefined,
-  manifestFileName: "manifest.json"
-}
-
 module.exports = class SpritePNG_Plugin {
-  constructor(option = defaultOptions) {
-    this._outputPath = option.outputPath;
-    this._includes = option.includes; // Reg and Reg Array are allowed
-    this._manifestPath = this.#getManifestPath(option.manifestFileName);
-    this._outputDir = null;
-    this._publicPath = null;
-    this._coordinateMeta = null;
-    this._coordinateRelativePath = null;
+  #cwd
+  #spriteImagePath
+  #manifestPath
+  #getIconPath
+  #gazeIns
+
+  /**
+   * @OPTION
+   *  - outputDir: sprite data output directory 
+   *  - entry: plugin will collect and watch all file in there
+   *  - excludes: ignore these files
+   */
+
+  constructor(option) {
+    if (this.#gazeIns)    this.#gazeIns.close();
+    this.#cwd             = process.cwd();
+    this._outputDir       = this.#getOutputDir(option.outputDir);
+    this._excludes        = option.excludes; // Reg and Reg Array are allowed
+    this._entryPath       = this.#getEntry(option.entry);
+    this.#spriteImagePath = path.join(this._outputDir, "sprite.png");
+    this.#manifestPath    = path.join(this._outputDir, "manifest.json");
+    this.#getIconPath     = path.join(this._outputDir, "getIcon.js");
+    this.#gazeIns         = new Gaze(option.entry, { cwd: this.#cwd, mode: "watch", debounceDelay: 400 });
   }
 
-  #getManifestPath(manifestPath) {
-    if (!manifestPath) return "./manifest.json";
-    if (!this.#isJSON(manifestPath)) return manifestPath += ".json";
-    return manifestPath;
+  #getIconTemplate() {
+    return(
+      `import manifest from './manifest.json';
+      import sprite from './sprite.png';
+      /**
+       * @typedef {Object} Icon
+       * @property {string} url
+       * @property {number} x 
+       * @property {number} y
+       * @property {number} w
+       * @property {number} h
+      */
+
+      /**
+       * 
+       * @param {keyof typeof manifest} iconName 
+       * @return {Icon}
+      */
+      export const getIcon = (iconName) => {
+          return {
+            src: sprite,
+            ...manifest[iconName]
+          }
+      };`
+    )
   }
 
-  #isJSON = (filePath) => filePath?.endsWith(".json");
+  #getOutputDir(outputDir = "./") {
+    const _outputDir = path.join(this.#cwd, outputDir);
+    if (!existsSync(_outputDir) || !lstatSync(_outputDir).isDirectory()) {
+      mkdirSync(_outputDir)
+    }
+    return _outputDir;
+  }
 
-  #isPng = (filePath) => filePath?.endsWith(".png");
+  #getEntry(entry) {
+    if (!entry) return [];
+    if (!Array.isArray(entry)) entry = [entry];
+    return entry;
+  }
 
   #createSpriteSheet(imagesData, callback) {
     Spritesmith.run({
       src: imagesData
     }, (err, result) => {
       if (err) throw err;
-      callback(result)
-    })
+      callback(result);
+    });
   }
 
-  #inWhiteList(compilation, filePath) {
-    const sourceFileName = this.#getSourceFileName(compilation, filePath);
-    if (!sourceFileName) return false;
-    if (!this._includes) return true;
-    const isRegExp = this._includes instanceof RegExp;
-    const isArr = Array.isArray(this._includes);
+  #notExcludes(filePath) {
+    if (!this._excludes) return true;
+    const isRegExp = this._excludes instanceof RegExp;
+    const isArr = Array.isArray(this._excludes);
+
+    if (!(isRegExp || isArr)) throw Error(`"excludes" can be "RegExp" or "RegExp Array" only but received "${typeof this._excludes}"`);
+
+    const posixPath = this.#convert2Posix(filePath);
     
-    if (!(isRegExp || isArr)) throw Error(`"includes" can be "RegExp" or "RegExp Array" only but received "${typeof this._includes}"`);
-    
-    if (isRegExp) return this._includes.test(sourceFileName);
+    if (isRegExp) return !this._excludes.test(posixPath);
     if (isArr) {
-      for (let idx = 0; idx < this._includes.length; idx++) {
-        const it = this._includes[idx];
+      for (let idx = 0; idx < this._excludes.length; idx++) {
+        const it = this._excludes[idx];
         if (!(it instanceof RegExp)) throw Error(`Item at ${idx} must be "RegExp" but received "${typeof it}"`);
-        if (it.test(sourceFileName)) return true;
+        if (it.test(posixPath)) return false;
       }
     }
-    return false;
+    return true;
   }
 
-  #getSourceFileName(compilation, assetPath) {
-    return compilation.assetsInfo.get(assetPath)?.sourceFilename;
+  #convert2Posix(v) {
+    return v ? v.split(path.sep).join(path.posix.sep) : ''
+  }
+
+  #spriteProcess(watcher = this.#gazeIns) {
+    if (!watcher) throw Error('Watcher is not initialed');
+      const sourceImagesByFolder = watcher.watched();
+      const allSourceImages = Object.values(sourceImagesByFolder).flatMap(v => v.filter(p => this.#notExcludes(p) && this.#isPng(p)));
+      if (allSourceImages?.length > 0) {  
+        this.#createSpriteSheet(allSourceImages, ({ coordinates, properties, image }) => {
+          let metadata = {};
+          Object.keys(coordinates).forEach(filePath => {
+            const fileName = `${path.dirname(filePath).split(path.sep).pop()}_${path.basename(filePath)}`;
+            metadata[fileName] = {
+              x: coordinates[filePath].x,
+              y: coordinates[filePath].y,
+              w: coordinates[filePath].width,
+              h: coordinates[filePath].height
+            }
+          })
+          Promise.all([
+            writeFile(this.#manifestPath, JSON.stringify(metadata), "utf8"),
+            writeFile(this.#spriteImagePath, image, "binary")
+          ]).then(r => {
+            writeFile(this.#getIconPath, this.#getIconTemplate());
+          })
+        });
+      };
+  }
+
+  #pathEqual(path1, path2) {
+    return path.relative(path1, path2) == '';
+  }
+
+  #isPng(filePath) {
+    return filePath?.endsWith(".png")
   }
 
   apply(compiler) {
-    // Create virtual manifest file in memory (maybe?)
-    const virtualModules = new VirtualModulesPlugin({
-      [this._manifestPath]: "{}"
-    });
+    const isProd = compiler.options.mode === "production";
 
-    virtualModules.apply(compiler);
+    this.#gazeIns.on("ready", this.#spriteProcess.bind(this));
 
-    compiler.hooks.thisCompilation.tap({ name: _PACKAGE_NAME }, (compilation) => {
-      const RawSource = compilation.compiler.webpack.sources.RawSource
-
-      this._outputDir = this._outputPath
-          ? path.resolve(process.cwd(), this._outputPath)
-          : compiler.outputPath;
-      
-      this._publicPath = compilation.outputOptions.publicPath;
-
-      // Use "tapAsync" instead of "tap" because create sprite is async function
-      compilation.hooks.processAssets.tapAsync(
-        {
-          name: _PACKAGE_NAME,
-          stage: compilation.PROCESS_ASSETS_STAGE_ADDITIONAL,
-        },
-        (assets, callback) => {
-          const imagesPath = Object.keys(assets).filter(filePath => this.#inWhiteList(compilation, filePath) && this.#isPng(filePath));
-
-          // Create image File Buffer
-          const imagesData = imagesPath.map(assetPath => new Vinyl({
-            path: path.join(this._outputDir, assetPath),
-            contents: assets[assetPath].source()
-          }));
-
-          if (imagesPath.length > 0) {
-            // Create sprite
-            this.#createSpriteSheet(imagesData, ({ coordinates, properties, image }) => {
-              const spriteSource = new RawSource(image);
-
-              imagesPath.forEach(imgPath => {
-                  compilation.updateAsset(imgPath, spriteSource);
-              });
-
-              //Generate coordinate mapping
-              let coordinateMeta = {};
-              coordinateMeta["width"] = properties.width;
-              coordinateMeta["height"] = properties.height;
-              coordinateMeta["frames"] = {};
-              Object.keys(coordinates).map(relativePath => {
-                coordinateMeta["frames"][path.basename(relativePath)] = coordinates[relativePath];
-              });
-              virtualModules.writeModule(this._manifestPath, JSON.stringify(coordinateMeta));
-              callback();
-            });
-          } else {
-            callback();
-          }
+    if (isProd) this.#gazeIns.close();
+    else {
+      // Listening files changed
+      this.#gazeIns.on("all", (event, filePath) => {
+        if (
+          event !== "renamed" && 
+          this.#notExcludes(filePath) && 
+          !this.#pathEqual(filePath, this.#spriteImagePath) && 
+          !this.#pathEqual(filePath, this.#manifestPath) && 
+          this.#isPng(filePath)
+        ) {
+          this.#spriteProcess();
         }
-      );
-    })
+      });
+    }
   }
 }
