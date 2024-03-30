@@ -17,9 +17,9 @@ const writeFile = util.promisify(fsWriteFile)
  * @_DEV_REFERENCE
  *  - Compiler docs: https://webpack.js.org/api/compiler-hooks
  *  - Compilation docs: https://webpack.js.org/api/compilation-hooks/
- *  - https://github.com/twolfson/spritesmith
- *  - Refer: https://github.com/DauMoe/image-sprite-webpack-plugin
- *  - Use webpack-virtual-modules: https://github.com/sysgears/webpack-virtual-modules/blob/master/examples/swagger-webpack4/webpack.config.js
+ *  - SpriteSmith: https://github.com/twolfson/spritesmith
+ *  - Refer: https://github.com/naver/image-sprite-webpack-plugin
+ *  - Usage webpack-virtual-modules: https://github.com/sysgears/webpack-virtual-modules/blob/master/examples/swagger-webpack4/webpack.config.js
  */
 
 module.exports = class SpritePNG_Plugin {
