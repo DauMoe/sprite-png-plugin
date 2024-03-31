@@ -7,6 +7,8 @@ import React from "react";
 ...
 import { getIcon } from ...; // outputDir + getIcon.js
 
+const example = getIcon("example_example-small.png"); // iconName = parent folder + "_" + icon name
+
 return (
   <YourComponent>
 )
