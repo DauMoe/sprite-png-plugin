@@ -7,11 +7,11 @@
 
 const Spritesmith = require("spritesmith");
 const path = require("path");
-const { existsSync, lstatSync, writeFile: fsWriteFile, mkdirSync } = require("fs");
-const { Gaze } = require("gaze");
+const { existsSync, lstatSync, writeFile: fsWriteFile, mkdirSync } = require("fs"); 
 const util = require("util");
 
 const writeFile = util.promisify(fsWriteFile)
+const NAMESPACE = "SPRITE_PNG_PLUGIN";
 
 /**
  * @_DEV_REFERENCE
@@ -26,8 +26,6 @@ module.exports = class SpritePNG_Plugin {
   #cwd
   #spriteImagePath
   #manifestPath
-  #getIconPath
-  #gazeIns
 
   /**
    * @OPTION
@@ -37,42 +35,12 @@ module.exports = class SpritePNG_Plugin {
    */
 
   constructor(option) {
-    if (this.#gazeIns)    this.#gazeIns.close();
     this.#cwd             = process.cwd();
     this._outputDir       = this.#getOutputDir(option.outputDir);
     this._excludes        = option.excludes; // Reg and Reg Array are allowed
     this._entryPath       = this.#getEntry(option.entry);
     this.#spriteImagePath = path.join(this._outputDir, "sprite.png");
     this.#manifestPath    = path.join(this._outputDir, "manifest.json");
-    this.#getIconPath     = path.join(this._outputDir, "getIcon.js");
-    this.#gazeIns         = new Gaze(option.entry, { cwd: this.#cwd, mode: "watch", debounceDelay: 400 });
-  }
-
-  #getIconTemplate() {
-    return(
-      `import manifest from './manifest.json';
-      import sprite from './sprite.png';
-      /**
-       * @typedef {Object} Icon
-       * @property {string} url
-       * @property {number} x 
-       * @property {number} y
-       * @property {number} w
-       * @property {number} h
-      */
-
-      /**
-       * 
-       * @param {keyof typeof manifest} iconName 
-       * @return {Icon}
-      */
-      export const getIcon = (iconName) => {
-          return {
-            src: sprite,
-            ...manifest[iconName]
-          }
-      };`
-    )
   }
 
   #getOutputDir(outputDir = "./") {
@@ -122,27 +90,38 @@ module.exports = class SpritePNG_Plugin {
     return v ? v.split(path.sep).join(path.posix.sep) : ''
   }
 
-  #spriteProcess(watcher = this.#gazeIns) {
-    if (!watcher) throw Error('Watcher is not initialed');
-      const sourceImagesByFolder = watcher.watched();
-      const allSourceImages = Object.values(sourceImagesByFolder).flatMap(v => v.filter(p => this.#notExcludes(p) && this.#isPng(p)));
-      if (allSourceImages?.length > 0) {  
-        this.#createSpriteSheet(allSourceImages, ({ coordinates, properties, image }) => {
-          let metadata = {};
-          Object.keys(coordinates).forEach(filePath => {
-            const fileName = `${path.dirname(filePath).split(path.sep).pop()}_${path.basename(filePath)}`;
-            metadata[fileName] = {
-              x: coordinates[filePath].x,
-              y: coordinates[filePath].y,
-              w: coordinates[filePath].width,
-              h: coordinates[filePath].height
-            }
-          })
-
-          writeFile(this.#manifestPath, JSON.stringify(metadata), "utf8")
+  #generateSpriteSheet(sources, callback) {
+    this.#createSpriteSheet(sources, ({ coordinates, properties, image }) => {
+      let metadata = {};
+      Object.keys(coordinates).forEach(filePath => {
+        const fileName = `${path.dirname(filePath).split(path.sep).pop()}_${path.basename(filePath)}`;
+        metadata[fileName] = {
+          x: coordinates[filePath].x,
+          y: coordinates[filePath].y,
+          w: coordinates[filePath].width,
+          h: coordinates[filePath].height
+        }
+      })
+      if (callback) {
+        Promise.all([ 
+          writeFile(this.#manifestPath, JSON.stringify(metadata), "utf8"),
           writeFile(this.#spriteImagePath, image, "binary")
-        });
-      };
+        ]).finally(callback);
+      } else {
+        writeFile(this.#manifestPath, JSON.stringify(metadata), "utf8"),
+        writeFile(this.#spriteImagePath, image, "binary")
+      }
+    });
+  }
+
+  #spriteProcess(watcher) {
+    if (!watcher) throw Error('Watcher is not initialed');
+    const sourceImagesByFolder = watcher.watched();
+    const allSourceImages = Object.values(sourceImagesByFolder)
+                              .flatMap(v => v.filter(p => this.#notExcludes(p) && this.#isPng(p)));
+    if (allSourceImages?.length > 0) {  
+      this.#generateSpriteSheet(allSourceImages);
+    };
   }
 
   #pathEqual(path1, path2) {
@@ -155,13 +134,20 @@ module.exports = class SpritePNG_Plugin {
 
   apply(compiler) {
     const isProd = compiler.options.mode === "production";
-
-    this.#gazeIns.on("ready", this.#spriteProcess.bind(this));
-
-    if (isProd) this.#gazeIns.close();
-    else {
+    const scanner = isProd ? require("glob").globSync : require("gaze").Gaze;
+    
+    if (isProd) {
+      compiler.hooks.beforeRun.tapAsync(NAMESPACE, (_, callback) => {
+        const allSourceImages = scanner(this._entryPath, { ignore: "node_modules/**", cwd: this.#cwd })
+                .map(v => path.join(this.#cwd, v))
+                .filter(p => this.#notExcludes(p) && this.#isPng(p))
+        if (allSourceImages.length > 0) this.#generateSpriteSheet(allSourceImages, callback);
+      })
+    } else {
+      const gazeIns = new scanner(this._entryPath, { cwd: this.#cwd, mode: "watch", debounceDelay: 400 });
+      gazeIns.on("ready", this.#spriteProcess.bind(this, gazeIns));
       // Listening files changed
-      this.#gazeIns.on("all", (event, filePath) => {
+      gazeIns.on("all", (event, filePath) => {
         if (
           event !== "renamed" && 
           this.#notExcludes(filePath) && 
@@ -169,7 +155,7 @@ module.exports = class SpritePNG_Plugin {
           !this.#pathEqual(filePath, this.#manifestPath) && 
           this.#isPng(filePath)
         ) {
-          this.#spriteProcess();
+          this.#spriteProcess(gazeIns);
         }
       });
     }
