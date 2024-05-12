@@ -138,12 +138,9 @@ module.exports = class SpritePNG_Plugin {
               h: coordinates[filePath].height
             }
           })
-          Promise.all([
-            writeFile(this.#manifestPath, JSON.stringify(metadata), "utf8"),
-            writeFile(this.#spriteImagePath, image, "binary")
-          ]).then(r => {
-            writeFile(this.#getIconPath, this.#getIconTemplate());
-          })
+
+          writeFile(this.#manifestPath, JSON.stringify(metadata), "utf8")
+          writeFile(this.#spriteImagePath, image, "binary")
         });
       };
   }
