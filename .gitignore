@@ -1,4 +1,4 @@
-node_modules
 dist
 .vscode
-sprite
+example
+node_modules
